@@ -44,7 +44,7 @@ if _RTLD_GLOBAL != 0:
 # import swig generated symbols into the scapy_radio namespace
 try:
         # this might fail if the module is python-only
-        from scapy_radio_swig import *
+        from .scapy_radio_swig import *
 except ImportError:
         pass
 
