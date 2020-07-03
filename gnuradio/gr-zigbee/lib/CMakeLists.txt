@@ -22,9 +22,6 @@
 ########################################################################
 include(GrPlatform) #define LIB_SUFFIX
 
-include_directories(${Boost_INCLUDE_DIR})
-link_directories(${Boost_LIBRARY_DIRS})
-
 list(APPEND zigbee_sources
     packet_sink_scapy_impl.cc
     preamble_prefixer_scapy_impl.cc
@@ -37,7 +34,13 @@ if(NOT zigbee_sources)
 endif(NOT zigbee_sources)
 
 add_library(gnuradio-zigbee SHARED ${zigbee_sources})
-target_link_libraries(gnuradio-zigbee ${Boost_LIBRARIES} ${GNURADIO_ALL_LIBRARIES})
+target_link_libraries(gnuradio-zigbee gnuradio::gnuradio-runtime gnuradio::gnuradio-blocks gnuradio::gnuradio-filter)
+target_include_directories(gnuradio-zigbee
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    PUBLIC $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>
+    PUBLIC $<INSTALL_INTERFACE:include>
+  )
+
 set_target_properties(gnuradio-zigbee PROPERTIES DEFINE_SYMBOL "gnuradio_zigbee_EXPORTS")
 
 if(APPLE)
@@ -49,32 +52,32 @@ endif(APPLE)
 ########################################################################
 # Install built library files
 ########################################################################
-install(TARGETS gnuradio-zigbee
-    LIBRARY DESTINATION lib${LIB_SUFFIX} # .so/.dylib file
-    ARCHIVE DESTINATION lib${LIB_SUFFIX} # .lib file
-    RUNTIME DESTINATION bin              # .dll file
-)
+include(GrMiscUtils)
+GR_LIBRARY_FOO(gnuradio-zigbee RUNTIME_COMPONENT "zigbee_runtime" DEVEL_COMPONENT "zigbee_devel")
 
 ########################################################################
 # Build and register unit test
 ########################################################################
 include(GrTest)
 
-include_directories(${CPPUNIT_INCLUDE_DIRS})
+# If your unit tests require special include paths, add them here
+# include_directories()
 
 list(APPEND test_zigbee_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/test_zigbee.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_zigbee.cc
 )
 
-add_executable(test-zigbee ${test_zigbee_sources})
+# Anything we need to link to for the unit tests go here
+list(APPEND GR_TEST_TARGET_DEPS gnuradio-zigbee)
 
-target_link_libraries(
-  test-zigbee
-  ${GNURADIO_RUNTIME_LIBRARIES}
-  ${Boost_LIBRARIES}
-  ${CPPUNIT_LIBRARIES}
-  gnuradio-zigbee
-)
+if(NOT test_foo_sources)
+    MESSAGE(STATUS "No C++ unit tests... skipping")
+    return()
+endif(NOT test_foo_sources)
 
-GR_ADD_TEST(test_zigbee test-zigbee)
+foreach(qa_file ${test_zigbee_sources})
+    GR_ADD_CPP_TEST("zigbee_${qa_file}"
+        ${CMAKE_CURRENT_SOURCE_DIR}/${qa_file}
+    )
+endforeach(qa_file)
