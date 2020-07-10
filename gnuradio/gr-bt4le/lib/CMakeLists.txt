@@ -22,27 +22,38 @@
 ########################################################################
 include(GrPlatform) #define LIB_SUFFIX
 
-include_directories(${Boost_INCLUDE_DIR})
-link_directories(${Boost_LIBRARY_DIRS})
-
 list(APPEND bt4le_sources
     packet_sink_impl.cc
     preamble_prefixer_impl.cc
     whitening_impl.cc
 )
 
+set(bt4le_sources "${bt4le_sources}" PARENT_SCOPE)
+if(NOT bt4le_sources)
+	MESSAGE(STATUS "No C++ sources... skipping lib/")
+	return()
+endif(NOT bt4le_sources)
+
 add_library(gnuradio-bt4le SHARED ${bt4le_sources})
 target_link_libraries(gnuradio-bt4le ${Boost_LIBRARIES} ${GNURADIO_RUNTIME_LIBRARIES})
+target_include_directories(gnuradio-bt4le
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    PUBLIC $<BUILD_INTERFACE:${Boost_INCLUDE_DIR}>
+    PUBLIC $<INSTALL_INTERFACE:include>
+  )
 set_target_properties(gnuradio-bt4le PROPERTIES DEFINE_SYMBOL "gnuradio_bt4le_EXPORTS")
+
+if(APPLE)
+    set_target_properties(gnuradio-lora PROPERTIES
+        INSTALL_NAME_DIR "${CMAKE_INSTALL_PREFIX}/lib"
+    )
+endif(APPLE)
 
 ########################################################################
 # Install built library files
 ########################################################################
-install(TARGETS gnuradio-bt4le
-    LIBRARY DESTINATION lib${LIB_SUFFIX} # .so/.dylib file
-    ARCHIVE DESTINATION lib${LIB_SUFFIX} # .lib file
-    RUNTIME DESTINATION bin              # .dll file
-)
+include(GrMiscUtils)
+GR_LIBRARY_FOO(gnuradio-bt4le RUNTIME_COMPONENT "bt4le_runtime" DEVEL_COMPONENT "bt4le_devel")
 
 ########################################################################
 # Build and register unit test
@@ -56,14 +67,16 @@ list(APPEND test_bt4le_sources
     ${CMAKE_CURRENT_SOURCE_DIR}/qa_bt4le.cc
 )
 
-add_executable(test-bt4le ${test_bt4le_sources})
+# Anything we need to link to for the unit tests go here
+list(APPEND GR_TEST_TARGET_DEPS gnuradio-scapy_radio)
 
-target_link_libraries(
-  test-bt4le
-  ${GNURADIO_RUNTIME_LIBRARIES}
-  ${Boost_LIBRARIES}
-  ${CPPUNIT_LIBRARIES}
-  gnuradio-bt4le
-)
+if(NOT test_foo_sources)
+    MESSAGE(STATUS "No C++ unit tests... skipping")
+    return()
+endif(NOT test_foo_sources)
 
-GR_ADD_TEST(test_bt4le test-bt4le)
+foreach(qa_file ${test_bt4l_sources})
+    GR_ADD_CPP_TEST("bt4le_${qa_file}"
+        ${CMAKE_CURRENT_SOURCE_DIR}/${qa_file}
+    )
+endforeach(qa_file)
