@@ -18,14 +18,6 @@
 # Boston, MA 02110-1301, USA.
 
 ########################################################################
-# Check if there is C++ code at all
-########################################################################
-if(NOT bt4le_radio_sources)
-	MESSAGE(STATUS "No C++ sources... skipping swig/")
-	return()
-endif(NOT bt4le_radio_sources)
-
-########################################################################
 # Include swig generation macros
 ########################################################################
 find_package(SWIG)
